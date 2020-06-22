@@ -56,13 +56,15 @@ async function toCommentData(postContent) {
 	};
 }
 
+// TODO: add link to publication date vs. author
 function renderComment(commentData) {
+	const formattedPublicationDate = commentData.publicationDate.toLocaleString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
 	return elem('li', {'style': 'border: dotted; border-width: 1px;'},
 		elem('header', {'style': 'font-family: Consolas, monaco, monospace; font-size: 12px'},
-			elem('address', {}, elem('a', {'href': commentData.postUrl}, commentData.author)),
-			elem('time', {}, commentData.publicationDate.toLocaleString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }))),
+			elem('div', {}, elem('strong', {}, commentData.author)),
+			elem('time', {}, elem('a', {'href': commentData.postUrl}, formattedPublicationDate)),
 		elem('div', {'style': 'font-family: Georgia, serif; font-size: 14px'},
-			...commentData.paragraphs.map(para => elem('p', {}, para))));
+			...commentData.paragraphs.map(para => elem('p', {}, para)))));
 }
 
 function renderComments(commentDataList) {	
@@ -98,6 +100,8 @@ async function renderCommentTreeInNewTab() {
 }
 
 // TODO:
-// - using 'paging' to retrieve all comments when > 25 (paging.next is undefined if no more items)
+// - avoid rate-limit errors (status code 429)
 // - include markup when rendering comments
+// 		- most important "markup" is quote from article, which isn't part of bodyModel.paragraphs; it's in payload.references.Quote (could use Quote.<id>.quoteParagraphPreview.text)
+//		- actual markup is in bodyModel.paragraphs[].markups (e.g., hyperlinks)
 // - make bookmarklet
