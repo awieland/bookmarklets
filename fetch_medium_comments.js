@@ -11,11 +11,23 @@ async function getPostId(postUrl) {
 }
 
 async function getCommentIds(postId) {
-	const response = await fetch('https://medium.com/_/api/posts/'+postId+'/responsesStream?filter=other')
-	const json = await parseJsonResponse(response);
-	return json.payload.streamItems
-		.filter(comment => comment.postPreview)
-		.map(comment => comment.postPreview.postId);
+	let currentPage, pagingTo;
+	const results = [];
+	do {
+		if (currentPage)
+			pagingTo = currentPage.payload.paging.next.to;
+		currentPage = await getCommentIdsPage(postId, pagingTo);
+		const commentIds = currentPage.payload.streamItems.map(comment => comment.postPreview.postId);
+		results.push(...commentIds);
+	} while (currentPage.payload.paging.next);
+	return results;
+}
+	
+async function getCommentIdsPage(postId, pagingTo) {
+	const pagingQueryParam = pagingTo ? '&to='+pagingTo : '';
+	const fetchCommentsUrl = 'https://medium.com/_/api/posts/'+postId+'/responsesStream?filter=other'+pagingQueryParam;
+	const response = await fetch(fetchCommentsUrl)
+	return parseJsonResponse(response);
 }
 
 async function getNestedComments(postId) {
@@ -28,7 +40,7 @@ async function getNestedComments(postId) {
 	}));
 }
 
-async function getPostContent(postId) {	
+async function getPostContent(postId) {
 	const response = await fetch('https://medium.com/post/'+postId+'?format=json');
 	return parseJsonResponse(response);
 }
@@ -58,7 +70,7 @@ function renderComments(commentDataList) {
 		...commentDataList.map(comment => {
 			const renderedComment = renderComment(comment);			
 			if (comment.childComments.length > 0)
-				renderedComment.append(renderComments(comment.childComments));			}	
+				renderedComment.append(renderComments(comment.childComments));
 			return renderedComment;
 	}));
 }
